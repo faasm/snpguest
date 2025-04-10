@@ -144,7 +144,7 @@ mod certificate_chain {
     }
 }
 
-mod attestation {
+pub mod attestation {
     use super::*;
 
     use asn1_rs::{oid, FromDer, Oid};

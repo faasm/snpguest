@@ -6,5 +6,5 @@ pub mod verify;
 use anyhow::{Context, Result};
 use clap::{arg, Parser, Subcommand, ValueEnum};
 
-// pub use verify::verify_attestation;
+pub use verify::attestation::verify_attestation;
 
