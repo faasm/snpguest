@@ -23,6 +23,13 @@ pub fn read_report(att_report_path: PathBuf) -> Result<AttestationReport, anyhow
     Ok(attestation_report)
 }
 
+pub fn read_report_bytes(report_bytes: &[u8]) -> Result<AttestationReport, anyhow::Error> {
+    let attestation_report = bincode::deserialize_from(report_bytes)
+        .context("Could not parse attestation report.")?;
+
+    Ok(attestation_report)
+}
+
 // Create 64 random bytes of data for attestation report request
 pub fn create_random_request() -> [u8; 64] {
     let mut data = [0u8; 64];

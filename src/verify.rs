@@ -3,7 +3,9 @@
 
 use super::*;
 
-use certs::{convert_path_to_cert, CertPaths};
+use anyhow::Context;
+use clap::{Parser, Subcommand};
+use certs::CertPaths;
 
 use std::{
     io::ErrorKind,
@@ -25,7 +27,7 @@ pub enum VerifyCmd {
 pub fn cmd(cmd: VerifyCmd, quiet: bool) -> Result<()> {
     match cmd {
         VerifyCmd::Certs(args) => certificate_chain::validate_cc(args, quiet),
-        VerifyCmd::Attestation(args) => attestation::verify_attestation(args, quiet),
+        VerifyCmd::Attestation(_) => panic!("invalid path"),
     }
 }
 
@@ -373,35 +375,16 @@ mod attestation {
         Ok(())
     }
 
-    pub fn verify_attestation(args: Args, quiet: bool) -> Result<()> {
+    pub fn verify_attestation(vcek: &[u8], att_report: &[u8]) -> Result<()> {
         // Get attestation report
-        let att_report = if !args.att_report_path.exists() {
-            return Err(anyhow::anyhow!("No attestation report was found. Provide an attestation report to request VEK from the KDS."));
-        } else {
-            report::read_report(args.att_report_path)
-                .context("Could not open attestation report")?
-        };
-
-        // Get VEK and its public key.
-        let (vek_path, vek_type) = match find_cert_in_dir(&args.certs_dir, "vlek") {
-            Ok(vlek_path) => (vlek_path, "vlek"),
-            Err(_) => (find_cert_in_dir(&args.certs_dir, "vcek")?, "vcek"),
-        };
+        let att_report = report::read_report_bytes(att_report)
+            .context("Could not parse attestation report")?;
 
         // Get VEK and grab its public key
-        let vek = convert_path_to_cert(&vek_path, vek_type)?;
-
-        if args.tcb || args.signature {
-            if args.tcb {
-                verify_attestation_tcb(vek.clone(), att_report, quiet)?;
-            }
-            if args.signature {
-                verify_attestation_signature(vek, att_report, quiet)?;
-            }
-        } else {
-            verify_attestation_tcb(vek.clone(), att_report, quiet)?;
-            verify_attestation_signature(vek, att_report, quiet)?;
-        }
+        // let vek = convert_path_to_cert(&vek_path, vek_type)?;
+        let vek = Certificate::from_bytes(vcek)?;
+        verify_attestation_tcb(vek.clone(), att_report, true)?;
+        verify_attestation_signature(vek, att_report, true)?;
 
         Ok(())
     }
